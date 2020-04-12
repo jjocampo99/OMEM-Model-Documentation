@@ -1,3 +1,10 @@
+;;Model designed and developed by Juan Ocampo - Lund University, Sweden. Stern K. Centre for Entrepreneurship 
+;;This model has been developed based on 2 weeks Fieldwork made in Kenya on November 2019 and interviews with Will Ruddick from Grassroot Economics.
+;;This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. To view a copy of this license, visit:
+;;https://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA. 
+;;Please cite the NetLogo software as:	Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL. 
+
+
 breed [ citizens citizen ] ;; members of a community
 breed [silcs silc] ;; silcs
 
