@@ -1,0 +1,749 @@
+breed [ citizens citizen ] ;; members of a community
+breed [silcs silc] ;; silcs
+
+
+citizens-own [ soe silcn price_cc price_reference reservation_price cc_wealth reserve_wealth ccwealth_evo reservew_evo reservation_evo_price ts tb tc tcp role last_seller my_surplus last_buyer tk_dvp val_coop]
+silcs-own [silcn cc_wallet_1 cc_wallet_2 reserve_wallet_1 reserve_wallet_2]
+
+globals [first-node second-node reserve1 reserve2 total_tk_1 total_tk_2 price1 price2 mkt_v1 mkt_v2 cc_wallet1 cc_wallet2 surplus_buyers surplus_sellers cooperative_price profit_price reserve_payed1 reserve_payed2]
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;SETUP;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to setup
+
+ca
+
+  ;;global variables
+
+  set reserve1 initial_reserve1
+  set reserve2 initial_reserve2
+  set total_tk_1 0
+  set total_tk_2 0
+  set price1 0
+  set price2 0
+  set surplus_buyers []
+  set surplus_sellers []
+  set cooperative_price []
+  set profit_price []
+  set reserve_payed1 0
+  set reserve_payed2 0
+
+
+;;; initialization procedures;;;;
+
+ crtctz                          ;; create citizens
+ initial_bonding
+
+
+
+
+ reset-ticks
+
+end
+
+
+to crtctz                               ;; create agents - Citizens
+
+create-citizens num-citizens [ set color orange  set shape "person"]
+
+  ask citizens [
+
+    setxy random-xcor random-ycor      ;; spread them around
+
+    set soe 0                          ;; the citizen soe could be cooperative 0, profit 1 or random 2
+    set silcn 0                        ;; assigns a citizen to a random silc
+
+    set price_cc 0                     ;; sets a random market prices of the selling product. This is minimun 10 and maximum 50.
+    set price_reference  0                ;; price of the product in reference currency
+
+    set reservation_price 0            ;; maxi price that a buyer will  accept a transaction
+    set reservation_evo_price []       ;; list that keeps tract of an agents surplus of sells
+
+    set cc_wealth 0               ;; total amount of money the citizens have in CC
+    set reserve_wealth 0               ;; The amount of reserver currency a agent has at time t
+    set ccwealth_evo []                ;; list that traces the cc_wealth of the citizen
+    set reservew_evo []                ;; list with reserve evo
+    set last_seller []                 ;; list with the last seller
+    set last_buyer []
+    set my_surplus []
+    set tk_dvp[]
+
+    set ts 0                            ;; this variable allows to keep track of the turtles that have already transacted as seller
+    set tb 0                            ;; this variable allows to keep track of the turtles that have already transacted as buyer
+    set tc 1                            ;; this aux. variable allows the identification of the cheapest seller available
+    set tcp tc * price_reference           ;; this aux. variable allows the identification of the cheapest seller available
+    set role []
+    set val_coop 0
+
+  ]
+
+  silc_member
+  set_reservation_price
+  set_soe
+
+end
+
+
+
+to set_soe
+
+ask citizens[
+
+  ifelse (random-float 100.0 < soe_cooperatives)
+    [set soe 0]                                 ;; set how many are cooperators
+    [set soe 2]
+      ;[ifelse (random-float 100.0 < soe_random)
+       ;[set soe 2]                              ;; set how many are profit seekers
+       ;[set soe 0]                              ;; the rest are random
+    ]
+
+;]
+end
+
+to silc_member  ;; sets the color of the citizens based on the silc their are part of
+
+ ask citizens [
+
+  ifelse (random-float 100.0 < silcs_members)
+    [set silcn 1]
+    [set silcn 2]
+
+  ]
+
+  ask citizens [
+     ifelse (silcn = 1) [
+      set color blue
+
+    ]
+      [set color green]
+  ]
+
+end
+
+to set_reservation_price                 ;; this sets the reservation price for buyers. The minimun is 0 * food price + food-price = food price; max is 1 * food-price+food price = 2food-price
+
+  ask citizens [
+
+     set reservation_price  ((random-float 1) * food-price) + food-price
+
+  ]
+
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;Bonding Curve Setup;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to initial_bonding
+
+  create_tokens
+  distribute_tokens
+  calculate_price
+  distribute_reserve
+  set_price
+
+end
+
+to create_tokens                 ;; based on the Bounding Curve initial parameters this procedure creates the initial tokens
+
+  ifelse count citizens with [silcn = 1] > 0
+  [  set total_tk_1 (initial_reserve1) * moneyx] ;* (count citizens with [silcn = 1])]
+  [ set total_tk_1 (initial_reserve1) * moneyx ]
+
+  ifelse count citizens with [silcn = 2] > 0
+    [set total_tk_2 (initial_reserve2)* moneyx] ;* (count citizens with [silcn = 2])]
+    [set total_tk_2 (initial_reserve2) * moneyx ]
+
+end
+
+
+to distribute_tokens             ;; based on the Bounding Curve initial parameters this procedure distributes the initial tokens and reserve among silc members
+
+   ask citizens with [silcn = 1] [
+
+    set cc_wealth cc_wealth + (total_tk_1 / count citizens with [silcn = 1])
+
+    set ccwealth_evo fput cc_wealth ccwealth_evo
+
+
+  ]
+
+   ask citizens with [silcn = 2] [
+
+
+    set cc_wealth  cc_wealth + total_tk_2 / (count citizens with [silcn = 2])
+
+    set ccwealth_evo fput cc_wealth ccwealth_evo
+
+  ]
+
+end
+
+to calculate_price
+
+  set price1 initial_reserve1 / (total_tk_1 * cw)       ;; formula from the Bancor Protocol
+  set price2 initial_reserve2 / (total_tk_2 * cw)
+
+  set mkt_v1 price1 * total_tk_1                        ;; formula from the Bancor Protocol
+  set mkt_v2 price2 * total_tk_2
+
+end
+
+to distribute_reserve
+
+   ask citizens with [silcn = 1] [
+
+     set reserve_wealth initial_reserve1 / count citizens with [silcn = 1]
+
+     set reservew_evo fput reserve_wealth reservew_evo
+
+  ]
+
+   ask citizens with [silcn = 2] [
+
+   set reserve_wealth initial_reserve2 / count citizens with [silcn = 2]
+
+   set reservew_evo fput reserve_wealth reservew_evo
+
+  ]
+
+
+end
+
+to set_price                             ;; set the initial price of the products they are selling
+
+ ask citizens [
+
+  set price_reference   ((random-float 1) * food-price) + food-price
+
+  ifelse silcn = 1
+
+      [set price_cc price_reference ]
+
+      [set price_cc price_reference ]
+
+  ]
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;PROCEDURES;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:
+
+
+to transaction_validation               ;; This might be the Go procedure
+
+ let max_b 0
+ set max_b  sum [tb] of citizens
+
+ let max_s 0
+ set max_s sum [ts] of citizens
+
+  let totctz 0
+  set totctz count citizens
+
+
+ ifelse (max_b <= totctz) or (max_s <= totctz)      ;; validates there are citizens that haven't sell
+   [transact_f]
+   [write "All possible transactions were done. Counter will be reset "
+   reset_trading]
+
+    tick
+
+end
+
+to transact_f
+
+  set first-node 0             ;; initiates the nodes that will transact as buyer
+  set second-node 0            ;; initiates the nodes that will transact as seller
+
+  let max_s 0
+  set max_s sum [ts] of citizens
+
+  set first-node one-of citizens with [tb = 0]
+
+  ifelse first-node = nobody
+
+  [write "All citizens bought. Counter will be reset "
+    reset_trading]
+
+  [
+    set second-node one-of citizens with [self != first-node and ts = 0]   ;; seller has to be different from itself and has not sold yet
+
+ifelse second-node = nobody
+
+  [write "All citizens sold. Counter will be reset "
+    reset_trading]
+    [
+      ask first-node[                                                         ;; this moves the agents to their potential seller
+        create-link-with second-node [ set color white ]
+        move-to second-node
+        ]
+
+
+    validate_reservation_price               ;; validates what is the soe of the agent and activates the relevant functions.
+
+  ]
+  ]
+
+
+end
+
+to validate_reservation_price
+
+  let temp1 0
+  let temp2 0
+  set temp1 [reservation_price] of first-node
+  set temp2 [price_reference ] of second-node
+
+ ifelse temp1 >= temp2
+
+
+  [validate_reserve1]
+
+  [ask first-node [set tb  1 ]
+
+  ask links [die] move-to one-of patches ]
+
+
+
+end
+
+to validate_reserve
+
+  let fn 0
+  set fn [silcn] of first-node
+  let sn 0
+  set sn [silcn] of second-node
+
+ ;;Estimate if buyer has anough reserve to transfer the seller based on the actual Reserve and Supply
+ ;;If it doesn't they the buyer can't
+
+  ifelse fn = sn
+
+    [validate_soe]
+
+    [validate_reserve1]
+
+end
+
+to validate_reserve1
+
+  let enough_reserve 0
+
+  let tk_destroyed 0                                      ;; temp variable that represents the reference price of the market
+  set tk_destroyed [price_reference] of second-node
+
+  let fn 0
+  set fn [silcn] of first-node
+
+  let temp1 0
+  set temp1 [reserve_wealth] of first-node
+
+
+  ifelse fn = 1
+  [
+  set enough_reserve 0
+  set enough_reserve reserve1 * ((( 1 + (( - tk_destroyed) / total_tk_1)) ^ (1 / cw)) - 1)
+  ]
+
+  [
+  set enough_reserve 0
+  set enough_reserve reserve2 * ((( 1 + (( - tk_destroyed) / total_tk_2)) ^ (1 / cw)) - 1)
+   ]
+
+ ifelse temp1 >= abs enough_reserve
+
+    [validate_soe]
+
+  [ask first-node [
+    set tb 1
+    ask links [die]
+    move-to one-of patches]
+    ]
+
+
+
+end
+
+to validate_soe    ;; validates what ype of system of exchange is the agent
+
+  let temp1 0
+  set temp1 [soe] of first-node
+
+
+
+
+    ifelse temp1 = 0                  ;;validates if it is cooperator
+           [select_silc]
+
+         [ifelse temp1 = 1            ;;validates if it is profit seeker or random buyer
+
+           [select_profit]
+
+           [select_random]
+         ]
+
+
+end
+
+
+
+to  select_silc
+
+  let vc_fn 0
+  set vc_fn [val_coop] of first-node
+
+  ifelse [silcn] of first-node = [silcn] of second-node
+
+  [enough_tk]
+
+  [ ifelse vc_fn < 3                            ;; This validates that when a cooperatives has not yet bought, but the only available seller is from an other SILC, after three attempts it looses its chance to buy and keeps the simulation going
+    [ ask first-node[
+    ask links [die]
+    move-to one-of patches
+
+    set val_coop val_coop + 1
+    ]]
+      [ask first-node [set tb 1]  ]
+
+    ]
+
+
+end
+
+
+to enough_tk
+
+  let temp3 0
+  let temp4 0
+  set temp3 [cc_wealth] of first-node
+  set temp4 [price_cc] of second-node
+
+  ifelse (temp3 > temp4)
+
+   [transfer_reserve]
+
+   [ask first-node [
+    set tb 1
+    ask links [die]
+    move-to one-of patches]
+
+   ]
+
+end
+
+
+to select_random          ;; being a random buyer the only thing that the agent analyses if it has enough money to buy. The reservation price is already validated.
+
+  let temp3 0
+  let temp4 0
+  set temp3 [cc_wealth] of first-node                  ;; since the transactions are supposed to be in TK, traders shouldn't just validate if they have enough YKb to do the transaction.
+  set temp4 [price_reference ] of second-node
+
+  ifelse (temp3 > temp4)         ;; validate if the buyer has enough reserve to buy to the offered product
+
+     [transfer_reserve]
+
+  [ask first-node [
+    set tb 1
+    ask links [die]
+    move-to one-of patches ]
+  ]
+
+
+end
+
+to transfer_reserve
+
+let fn 0
+set fn [silcn] of first-node
+
+
+  ifelse fn = 1
+    [ask first-node [calculate_buyer1]
+     ask second-node [calculate_seller1]]
+
+    [ask first-node [calculate_buyer2]
+     ask second-node [calculate_seller2]]
+
+
+
+end
+
+
+
+to calculate_buyer1
+
+  let tk_destroyed 0                                      ;; temp variable that represents the reference price of the market
+  set tk_destroyed [price_reference] of second-node
+
+  let surplus 0                                   ;; Surplus value to observe the economic impact of the behaivours
+  set surplus [reservation_price] of first-node - [price_reference] of second-node
+
+  let seller 0                                   ;; id of the seller
+  set seller [who] of second-node
+
+
+  ;;;Estimate the amount reserve to transfer the seller based on the actual Reserve and Supply;;
+
+  set reserve_payed1 0
+  set reserve_payed1 reserve1 * ((( 1 + (( - tk_destroyed) / total_tk_1)) ^ (1 / cw)) - 1)
+
+  set reserve_wealth reserve_wealth + reserve_payed1
+  set reservew_evo fput reserve_wealth reservew_evo
+
+  ;;;Estimate the amount of tokens that I have to take from my supply;;
+
+  let my_tk_dest 0
+  set my_tk_dest total_tk_1 * ((( 1 + (reserve_payed1 / reserve1)) ^  cw) - 1)
+  set tk_dvp fput my_tk_dest tk_dvp
+
+   set cc_wealth cc_wealth + my_tk_dest
+   set ccwealth_evo fput cc_wealth ccwealth_evo
+   set my_tk_dest 0
+
+
+
+   set tb 1
+   set role fput "b" role
+   set last_seller fput seller last_seller
+
+   set surplus_buyers fput surplus surplus_buyers           ;;registers the surplus in a list
+   set my_surplus fput surplus my_surplus                   ;;registers the surplus in the list of the agent
+
+   ask links [die]
+   move-to one-of patches
+
+end
+
+
+to calculate_seller1           ;; calculates when the reserves comes from TK1
+
+  let sn 0
+  set sn [silcn] of second-node
+  let buyer 0                                   ;; id of the buyer
+  set buyer [who] of first-node
+
+  ifelse sn = 1
+
+    [
+     let my_tk_mint 0
+     set my_tk_mint total_tk_1 * ((( 1 + ((reserve_payed1) / (reserve1))) ^ cw) - 1)        ;; This gives a negative number
+
+     set cc_wealth cc_wealth - my_tk_mint                                                  ;; a substraction so the negative becomes positive
+     set ccwealth_evo fput cc_wealth ccwealth_evo
+     set tk_dvp fput my_tk_mint tk_dvp
+
+     set reserve_wealth reserve_wealth - reserve_payed1                                   ;; a substraction so the negative becomes positive
+     set reservew_evo fput reserve_wealth reservew_evo
+
+    set ts 1
+    set role fput "s" role
+    set last_buyer fput buyer last_buyer
+
+   update_bonding_curves1
+    ]
+
+   [
+     let my_tk_mint 0
+     set my_tk_mint total_tk_2 * ((( 1 + ((reserve_payed1) / (reserve2))) ^  cw) - 1)        ;; This gives a negative number
+
+     set cc_wealth cc_wealth - my_tk_mint                                                  ;; a substraction so the negative becomes positive
+     set ccwealth_evo fput cc_wealth ccwealth_evo
+     set tk_dvp fput my_tk_mint tk_dvp
+
+
+     set reserve_wealth reserve_wealth - reserve_payed1                                   ;; a substraction so the negative becomes positive
+     set reservew_evo fput reserve_wealth reservew_evo
+
+     set ts 1
+     set role fput "s" role
+     set last_buyer fput buyer last_buyer
+
+    update_bonding_curves1
+    update_bonding_curves2
+  ]
+
+ set reserve_payed1 0
+
+end
+
+to calculate_buyer2
+
+
+  let tk_destroyed 0                                      ;; temp variable that represents the reference price of the market
+  set tk_destroyed [price_reference ] of second-node
+
+  let surplus 0                                   ;; Surplus value to observe the economic impact of the behaivours
+  set surplus [reservation_price] of first-node - [price_reference] of second-node
+
+  let seller 0                                   ;; id of the seller
+  set seller [who] of second-node
+
+
+  ;;;Estimate the amount reserve to transfer the seller based on the actual Reserve and Supply;;
+
+  set reserve_payed2 0
+  set reserve_payed2 reserve2 * ((( 1 + (( - tk_destroyed) / total_tk_2)) ^ (1 / cw)) - 1)
+
+  set reserve_wealth reserve_wealth + reserve_payed2
+  set reservew_evo fput reserve_wealth reservew_evo
+
+  ;;;Estimate the amount of tokens that I have to take from my supply;;
+
+  let my_tk_dest 0
+  set my_tk_dest total_tk_2 * ((( 1 + (reserve_payed2 / reserve2)) ^  cw) - 1)
+  set tk_dvp fput my_tk_dest  tk_dvp
+
+   set cc_wealth cc_wealth + my_tk_dest
+   set ccwealth_evo fput cc_wealth ccwealth_evo
+   set my_tk_dest 0
+
+
+
+   set tb 1
+   set role fput "b" role
+   set last_seller fput seller last_seller
+
+   set surplus_buyers fput surplus surplus_buyers           ;;registers the surplus in a list
+   set my_surplus fput surplus my_surplus                   ;;registers the surplus in the list of the agent
+
+   ask links [die]
+   move-to one-of patches
+
+end
+
+
+to calculate_seller2           ;; calculates when the reserves comes from TK2
+
+  let sn 0
+  set sn [silcn] of second-node
+
+  let buyer 0                                   ;; id of the buyer
+  set buyer [who] of first-node
+
+  ifelse sn = 1
+
+    [
+     let my_tk_mint 0
+     set my_tk_mint total_tk_1 * ((( 1 + (reserve_payed2 / reserve1)) ^  cw) - 1)        ;; This gives a negative number
+
+     set cc_wealth cc_wealth - my_tk_mint                                                  ;; a substraction so the negative becomes positive
+     set ccwealth_evo fput cc_wealth ccwealth_evo
+     set tk_dvp fput my_tk_mint tk_dvp
+
+     set reserve_wealth reserve_wealth - reserve_payed2                                   ;; a substraction so the negative becomes positive
+     set reservew_evo fput reserve_wealth reservew_evo
+
+     set ts 1
+     set role fput "s" role
+     set last_buyer fput buyer last_buyer
+
+    update_bonding_curves2
+    update_bonding_curves1
+    ]
+
+   [
+    let my_tk_mint 0
+     set my_tk_mint total_tk_2 * ((( 1 + ((reserve_payed2) / (reserve2))) ^  cw) - 1)        ;; This gives a negative number
+
+     set cc_wealth cc_wealth - my_tk_mint                                                  ;; a substraction so the negative becomes positive
+     set ccwealth_evo fput cc_wealth ccwealth_evo
+     set tk_dvp fput my_tk_mint tk_dvp
+
+
+
+     set reserve_wealth reserve_wealth - reserve_payed2                                   ;; a substraction so the negative becomes positive
+     set reservew_evo fput reserve_wealth reservew_evo
+
+     set ts 1
+     set role fput "s" role
+     set last_buyer fput buyer last_buyer
+
+    update_bonding_curves2
+  ]
+
+   set reserve_payed2 0
+
+end
+
+
+to update_bonding_curves1
+
+update_reserve1
+update_supply1
+update_price1
+
+end
+
+to update_bonding_curves2
+
+update_reserve2
+update_supply2
+update_price2
+
+end
+
+to update_reserve1 ;;update the reserve available in each for price calculation
+
+  set reserve1 sum [reserve_wealth] of citizens with [silcn = 1]
+
+end
+
+to update_supply1  ;;update the supply available in each for price calculation
+
+  set total_tk_1 sum [cc_wealth] of citizens with [silcn = 1]
+
+
+end
+
+to update_price1    ;; calculate price
+
+  set price1 reserve1 / (total_tk_1 * cw)       ;; formula from the Bancor Protocol
+
+end
+
+to update_reserve2 ;;update the reserve available in each for price calculation
+
+
+  set reserve2 sum [reserve_wealth] of citizens with [silcn = 2]
+
+end
+
+to update_supply2  ;;update the supply available in each for price calculation
+
+
+  set total_tk_2 sum [cc_wealth] of citizens with [silcn = 2]
+
+end
+
+to update_price2    ;; calculate price
+
+  set price2 reserve2 / (total_tk_2 * cw)
+
+end
+
+
+to select_profit
+end
+
+to reset_trading
+
+  ask citizens [
+
+    set ts 0                            ;; this variable allows to keep track of the turtles that have already transacted as seller
+    set tb 0                            ;; this variable allows to keep track of the turtles that have already transacted as buyer
+    set tc 1                            ;; this aux. variable allows the identification of the cheapest seller available
+
+  ]
+
+end
+
+
+
+
+
+
+
