@@ -1,0 +1,24 @@
+What is the purpose of the study?:
+
+Model the concept of bonding curves for CIC, and different modes of exchange. Simulate possible scenarios as an input for the development of governance rules.
+
+For whom is the model designed?:
+
+The model is designed for Grassroot Economics (platform designers). 
+Potentially, this model could be of educational interest for stakeholders 
+(i.e. Communities, potential funders of CIC, and scholars) that are not involved in the technicalities of the platform and would like to learn how it works in a low risk environment.
+
+
+What is the model doing?:
+
+•	Simulate different actors that are present in these type of currencies (modes of exchange)
+•	Analyse the economic efficiency of the CIC, by comparing different actors
+•	Explore the concepts of CIC and Bounding Curves
+
+•	Use the concept of Bounding Curves in the development of a CIC
+•	Develop a model that helps in explaining the concept of BC to relevant stakeholders
+•	Simulate different scenarios that could inspire different practical decision-making for the monetary designers (i.e. Grassroot Economics)
+•	Reflect on the benefits and challenges of using a BC approach in communities with different modes of exchange (in terms of monetary model)
+
+
+To run this model you need NETLOGO versio6.1
