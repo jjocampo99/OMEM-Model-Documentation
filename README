@@ -1,6 +1,6 @@
 contact: jj.ocampo24@gmail.com
 Original developer: Juan Ocampo
-Blog: https://juanocampo.weebly.com/
+Blog: https://www.juanocampo.net
 
 
 What is the purpose of the study?:
@@ -17,13 +17,13 @@ Potentially, this model could be of educational interest for stakeholders
 What is the model doing?:
 
 •	Simulate different actors that are present in these type of currencies (modes of exchange)
-•	Analyse the economic efficiency of the CIC, by comparing different actors
-•	Explore the concepts of CIC and Bounding Curves
+•	Analyse the economic efficiency of the BIC, by comparing different actors
+•	Explore the concepts of CC and Bounding Curves
 
-•	Use the concept of Bounding Curves in the development of a CIC
-•	Develop a model that helps in explaining the concept of BC to relevant stakeholders
-•	Simulate different scenarios that could inspire different practical decision-making for the monetary designers (i.e. Grassroot Economics)
-•	Reflect on the benefits and challenges of using a BC approach in communities with different modes of exchange (in terms of monetary model)
+•	Use the concept of Bounding Curves in the development of a CC
+•	Develop a model that helps in explaining the concept of CC to relevant stakeholders
+•	Simulate different scenarios that could inspire different practical decision-making for the money designers
+•	Reflect on the benefits and challenges of using a BC approach in communities with different modes of exchange
 
 
 To run this model you need NETLOGO version6.1
